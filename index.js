@@ -1,16 +1,24 @@
 const http = require('http');
 const {
-  Client, GatewayIntentBits, SlashCommandBuilder, MessageFlags,
+  Client, GatewayIntentBits, Partials, SlashCommandBuilder, MessageFlags,
 } = require('discord.js');
 const cfg = require('./config');
 const { db, init } = require('./db');
 const gw = require('./giveaway');
+const tickets = require('./tickets');
+const help = require('./commandes');
 
 http.createServer((req, res) => { res.writeHead(200); res.end('ok'); })
   .listen(process.env.PORT || 3000);
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildInvites],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.GuildMessages,
+  ],
+  partials: [Partials.Message, Partials.Channel],
 });
 
 let cache = new Map();
@@ -22,7 +30,7 @@ async function snapshot(guild) {
 
 const isStaff = (m) => m.roles.cache.hasAny(...cfg.STAFF_ROLES);
 
-const command = new SlashCommandBuilder()
+const giveawayCommand = new SlashCommandBuilder()
   .setName('giveaway').setDescription('Gérer le giveaway d’invitations')
   .addSubcommand((s) => s.setName('creer').setDescription('Poster le giveaway')
     .addChannelOption((o) => o.setName('salon').setDescription('Salon du giveaway')))
@@ -31,11 +39,16 @@ const command = new SlashCommandBuilder()
     .addUserOption((o) => o.setName('membre').setDescription('Membre').setRequired(true)))
   .toJSON();
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   await init();
   const guild = await client.guilds.fetch(cfg.GUILD_ID);
-  await guild.commands.set([command]);
+  const cmds = await guild.commands.set([giveawayCommand, tickets.ticketCommand, help.commandesCommand]);
+  help.setIds(cmds);
   await snapshot(guild).catch((e) => console.error('snapshot', e.message));
+
+  tickets.ensurePanel(client).catch((e) => console.error('panneau', e.message));
+  setInterval(() => tickets.ensurePanel(client).catch(() => {}), 5 * 60 * 1000);
+
   setInterval(async () => {
     const g = await gw.getActive(cfg.GUILD_ID);
     if (g && g.status === 'active' && Date.now() >= Number(g.end_ts)) await gw.finish(client);
@@ -45,6 +58,9 @@ client.once('ready', async () => {
 
 client.on('inviteCreate', (i) => cache.set(i.code, i.uses || 0));
 client.on('inviteDelete', (i) => cache.delete(i.code));
+
+client.on('messageDelete', (m) => { tickets.onMessageDelete(m, client).catch(() => {}); });
+client.on('channelDelete', (c) => { tickets.onChannelDelete(c, client).catch(() => {}); });
 
 client.on('guildMemberAdd', async (m) => {
   if (m.user.bot || m.guild.id !== cfg.GUILD_ID) return;
@@ -100,6 +116,12 @@ client.on('guildMemberRemove', async (m) => {
 
 client.on('interactionCreate', async (i) => {
   try {
+    if (await tickets.handle(i, client)) return;
+
+    if (i.isChatInputCommand() && i.commandName === 'commandes') {
+      return i.reply({ embeds: [help.commandesEmbed()], flags: MessageFlags.Ephemeral });
+    }
+
     if (i.isChatInputCommand() && i.commandName === 'giveaway') {
       if (!isStaff(i.member)) {
         return i.reply({ content: '❌ Réservé au staff (Administrateur et plus).', flags: MessageFlags.Ephemeral });
