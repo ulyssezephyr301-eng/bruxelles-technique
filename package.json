@@ -1,10 +1,10 @@
 {
   "name": "bruxelles-technique",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "scripts": { "start": "node index.js" },
   "dependencies": {
-    "discord.js": "^14.16.3",
+    "discord.js": "^14.19.0",
     "@libsql/client": "^0.14.0"
   }
 }
