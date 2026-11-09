@@ -1,0 +1,12 @@
+module.exports = {
+  TOKEN: process.env.DISCORD_TOKEN,
+  GUILD_ID: process.env.GUILD_ID || '1513940188060057720',
+  CIVIL_ROLE: '1517283159744577596',
+  // Administrateur, Exécutif, Fondateur
+  STAFF_ROLES: ['1563694441212944434', '1514237734472908810', '1513966828555210752'],
+  START: Date.parse('2026-11-11T14:00:00+01:00'),
+  END: Date.parse('2026-12-20T23:59:00+01:00'),
+  MIN_INVITES: 5,
+  COLOR: 0xf5c518,
+  FOOTER: 'Dev by U-lis ⚜',
+};
