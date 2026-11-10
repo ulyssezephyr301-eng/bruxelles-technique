@@ -10,7 +10,9 @@ module.exports = {
     '1514240838916509696', '1514240629889175693', '1563694441212944434',
     '1514237734472908810', '1513966828555210752',
   ],
-
+  // Rôles pingés quand un ticket est ouvert : Modérateur, Guide
+  TICKET_PING_ROLES: ['1514240629889175693', '1514240838916509696'],
+  
   // Giveaway
   START: Date.parse('2026-11-11T14:00:00+01:00'),
   END: Date.parse('2026-12-20T23:59:00+01:00'),
