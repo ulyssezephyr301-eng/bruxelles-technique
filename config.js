@@ -13,6 +13,9 @@ module.exports = {
   // Rôles pingés quand un ticket est ouvert : Modérateur, Guide
   TICKET_PING_ROLES: ['1514240629889175693', '1514240838916509696'],
 
+  // Rôles donnés automatiquement à chaque nouveau membre
+  AUTO_ROLES: ['1564959949497434122', '1566513011823222927', '1533997429979086940'],
+
   // Giveaway
   START: Date.parse('2026-11-11T14:00:00+01:00'),
   END: Date.parse('2026-12-20T23:59:00+01:00'),
