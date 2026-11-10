@@ -1,3 +1,4 @@
+
 const http = require('http');
 const {
   Client, GatewayIntentBits, Partials, SlashCommandBuilder, MessageFlags,
@@ -6,6 +7,7 @@ const cfg = require('./config');
 const { db, init } = require('./db');
 const gw = require('./giveaway');
 const tickets = require('./tickets');
+const notifications = require('./notifications');
 const effectif = require('./effectif');
 const voc = require('./vocal');
 const help = require('./commandes');
@@ -53,6 +55,9 @@ client.once('clientReady', async () => {
 
   tickets.ensurePanel(client).catch((e) => console.error('panneau', e.message));
   setInterval(() => tickets.ensurePanel(client).catch(() => {}), 5 * 60 * 1000);
+
+  notifications.ensurePanel(client).catch((e) => console.error('[notifications] panneau', e.message));
+  setInterval(() => notifications.ensurePanel(client).catch((e) => console.error('[notifications]', e.message)), 5 * 60 * 1000);
 
   effectif.ensureEffectif(client, 'refresh').catch((e) => console.error('effectif', e.message));
   setInterval(() => effectif.ensureEffectif(client, 'check').catch(() => {}), 5 * 60 * 1000);
@@ -151,6 +156,7 @@ client.on('guildMemberRemove', async (m) => {
 client.on('interactionCreate', async (i) => {
   try {
     if (await tickets.handle(i, client)) return;
+    if (await notifications.handle(i)) return;
     if (await effectif.handle(i, client)) return;
     if (await voc.handle(i)) return;
 
@@ -207,7 +213,7 @@ client.on('interactionCreate', async (i) => {
       });
       let code = r.rows[0]?.code;
       if (code) {
-        const still = await i.guild.invites.fetch().then((x) => x.has(code)).catch(() => true);
+        const still = await i.channel.invites.fetch().then((x) => x.has(code)).catch(() => true);
         if (!still) code = null;
       }
       if (!code) {
