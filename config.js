@@ -12,7 +12,7 @@ module.exports = {
   ],
   // Rôles pingés quand un ticket est ouvert : Modérateur, Guide
   TICKET_PING_ROLES: ['1514240629889175693', '1514240838916509696'],
-  
+
   // Giveaway
   START: Date.parse('2026-11-11T14:00:00+01:00'),
   END: Date.parse('2026-12-20T23:59:00+01:00'),
@@ -33,6 +33,27 @@ module.exports = {
     { id: 'signalement', emoji: '🚨', label: 'Signalement', desc: 'Signale un joueur ou une situation (pense à joindre tes preuves).' },
     { id: 'technique', emoji: '⚙️', label: 'Support Technique', desc: 'Un bug du serveur, d’un bot ou une erreur de connexion ? Décris le problème.' },
     { id: 'prioritaire', emoji: '🚀', label: 'Support Prioritaire', desc: 'Ouvre n’importe quel type de demande ici, elle passe avant les autres tickets.', restricted: true },
+  ],
+
+  // Effectif
+  EFFECTIF_CHANNEL: '1567234864694952037',
+  EFFECTIF_GROUPS: [
+    {
+      title: '👑 Direction', color: 0xf5c518, max: 600,
+      roles: ['1513966828555210752', '1514237734472908810'], // Fondateur, Exécutif
+    },
+    {
+      title: '🛡️ Staff', color: 0xe67e22, max: 550,
+      roles: ['1563694441212944434', '1514240629889175693', '1514240838916509696'], // Admin, Modo, Guide
+    },
+    {
+      title: '🎨 Pôle création', color: 0x2ecc71, max: 550,
+      roles: ['1558426593138049034', '1558426732699324446', '1569505793923874827'], // Graphiste, Développeur, Content creator
+    },
+    {
+      title: '💎 Soutiens', color: 0x9b59b6, max: 900,
+      roles: ['1569496721724280854', '1569496637414449213'], // Booster, VIP
+    },
   ],
 
   COLOR: 0xf5c518,
