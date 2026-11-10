@@ -42,7 +42,9 @@ const giveawayCommand = new SlashCommandBuilder()
 client.once('clientReady', async () => {
   await init();
   const guild = await client.guilds.fetch(cfg.GUILD_ID);
-  const cmds = await guild.commands.set([giveawayCommand, tickets.ticketCommand, help.commandesCommand]);
+  const cmds = await guild.commands.set([
+    giveawayCommand, tickets.ticketCommand, help.commandesCommand, effectif.effectifCommand,
+  ]);
   help.setIds(cmds);
   await snapshot(guild).catch((e) => console.error('snapshot', e.message));
 
