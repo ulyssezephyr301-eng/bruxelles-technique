@@ -1,10 +1,6 @@
 
-const {
-  AttachmentBuilder,
-  EmbedBuilder,
-} = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const cfg = require('./config');
 
 const GUILD_ID = cfg.GUILD_ID;
@@ -18,19 +14,15 @@ const INFO_CHANNEL_ID = '1563691087271432192';
 const SERVERS_CHANNEL_ID = '1567231276040065116';
 const TICKET_CHANNEL_ID = '1569495381706801243';
 
-const BACKGROUND_URL =
-  'https://media.discordapp.net/attachments/1514274839823646730/1569491357226111128/joinimg.png?ex=6af44efb&is=6af2fd7b&hm=7597d826386bbeb669b47e4c599be22fc29c1e60778318f046885dfbb5087eb4&=&format=webp&quality=lossless';
-
 const welcomeSent = new Set();
 const pendingInviteSaves = new Map();
 
-let backgroundPromise;
 let inviteCache = new Map();
 let inviteQueue = Promise.resolve();
 
 const welcomeMessages = [
   'Toute l’équipe est heureuse de t’accueillir ! Installe-toi et profite de ton expérience parmi nous.',
-  'Un nouveau visage parmi nous ! Nous te souhaitons une excellente aventure sur Bruxelles Technique.',
+  'Un nouveau visage parmi nous ! Nous te souhaitons une excellente aventure sur Bruxelles Role-Play.',
   'Bienvenue dans la communauté ! Nous espérons que tu passeras de très bons moments avec nous.',
   'Nous sommes ravis de te compter parmi nous. N’hésite pas à participer et à faire connaissance !',
   'Une nouvelle personne rejoint l’aventure ! Toute l’équipe te souhaite la bienvenue.',
@@ -43,144 +35,6 @@ function randomWelcome() {
   return welcomeMessages[
     Math.floor(Math.random() * welcomeMessages.length)
   ];
-}
-
-async function getBackground() {
-  if (!backgroundPromise) {
-    backgroundPromise = (async () => {
-      const response = await fetch(BACKGROUND_URL);
-
-      if (!response.ok) {
-        throw new Error(`Image inaccessible : ${response.status}`);
-      }
-
-      return loadImage(Buffer.from(await response.arrayBuffer()));
-    })();
-  }
-
-  return backgroundPromise;
-}
-
-function drawCover(ctx, image, width, height) {
-  const scale = Math.max(
-    width / image.width,
-    height / image.height
-  );
-
-  const w = image.width * scale;
-  const h = image.height * scale;
-
-  ctx.drawImage(
-    image,
-    (width - w) / 2,
-    (height - h) / 2,
-    w,
-    h
-  );
-}
-
-function fitText(ctx, text, maxWidth, initialSize) {
-  let size = initialSize;
-
-  while (size > 20) {
-    ctx.font = `bold ${size}px Arial`;
-
-    if (ctx.measureText(text).width <= maxWidth) break;
-
-    size -= 2;
-  }
-
-  return size;
-}
-
-async function createMemberImage(member, isLeaving = false) {
-  const width = 1200;
-  const height = 420;
-
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-
-  try {
-    const background = await getBackground();
-    drawCover(ctx, background, width, height);
-  } catch (error) {
-    console.error('[welcome] Fond indisponible :', error.message);
-
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#171b35');
-    gradient.addColorStop(1, '#354b79');
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-  }
-
-  // Voile sombre
-  ctx.fillStyle = 'rgba(8, 12, 25, 0.60)';
-  ctx.fillRect(0, 0, width, height);
-
-  // Avatar
-  const avatarUrl = member.user.displayAvatarURL({
-    extension: 'png',
-    size: 256,
-  });
-
-  const avatarResponse = await fetch(avatarUrl);
-
-  if (!avatarResponse.ok) {
-    throw new Error('Impossible de récupérer l’avatar.');
-  }
-
-  const avatar = await loadImage(
-    Buffer.from(await avatarResponse.arrayBuffer())
-  );
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(215, 210, 115, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.clip();
-  ctx.drawImage(avatar, 100, 95, 230, 230);
-  ctx.restore();
-
-  // Contour de l'avatar
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.arc(215, 210, 119, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Texte
-  ctx.fillStyle = '#ffffff';
-
-  const title = isLeaving ? 'À BIENTÔT !' : 'BIENVENUE !';
-
-  ctx.font = 'bold 38px Arial';
-  ctx.fillText(title, 390, 145);
-
-  const displayName =
-    member.user.globalName || member.user.username;
-
-  const fontSize = fitText(ctx, displayName, 730, 62);
-
-  ctx.font = `bold ${fontSize}px Arial`;
-  ctx.fillText(displayName, 390, 225);
-
-  ctx.font = '28px Arial';
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-
-  ctx.fillText(
-    isLeaving
-      ? 'Merci pour ton passage sur le serveur !'
-      : 'Bienvenue dans la communauté Bruxelles Technique',
-    390,
-    285
-  );
-
-  ctx.font = '22px Arial';
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText(`Membre ${member.guild.memberCount}`, 390, 340);
-
-  return canvas.toBuffer('image/png');
 }
 
 function formatDuration(ms) {
@@ -278,19 +132,16 @@ async function sendWelcome(member, db) {
 
     if (!channel || !channel.isTextBased()) return;
 
-    const image = await createMemberImage(member);
-
-    const attachment = new AttachmentBuilder(image, {
-      name: 'bienvenue.png',
-    });
-
     const createdAt = Math.floor(
       member.user.createdTimestamp / 1000
     );
 
+    const displayName =
+      member.user.globalName || member.user.username;
+
     const embed = new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle('Bienvenue sur Bruxelles Technique !')
+      .setTitle('Bienvenue sur Bruxelles Role-Play !')
       .setDescription(
         `${randomWelcome()}\n\n` +
         `**Invité par :** ${inviterText}\n\n` +
@@ -301,7 +152,7 @@ async function sendWelcome(member, db) {
       .addFields(
         {
           name: 'Membre',
-          value: `${member.user}`,
+          value: `${displayName}\n${member.user}`,
           inline: true,
         },
         {
@@ -310,24 +161,27 @@ async function sendWelcome(member, db) {
           inline: true,
         },
         {
+          name: 'Membres du serveur',
+          value: `${member.guild.memberCount}`,
+          inline: true,
+        },
+        {
           name: 'Compte créé',
           value: `<t:${createdAt}:F>`,
           inline: false,
         }
       )
-      .setImage('attachment://bienvenue.png')
       .setThumbnail(
         member.user.displayAvatarURL({ size: 256 })
       )
       .setFooter({
-        text: 'Bruxelles Technique • Bienvenue parmi nous',
+        text: 'Bruxelles Role-Play • Bienvenue parmi nous',
       })
       .setTimestamp();
 
     await channel.send({
       content: `<@${member.id}>`,
       embeds: [embed],
-      files: [attachment],
       allowedMentions: {
         users: [
           member.id,
@@ -370,17 +224,14 @@ async function sendLeave(member) {
       ? formatDuration(now - joinedAt)
       : 'Durée inconnue';
 
-    const image = await createMemberImage(member, true);
-
-    const attachment = new AttachmentBuilder(image, {
-      name: 'depart.png',
-    });
+    const displayName =
+      member.user.globalName || member.user.username;
 
     const embed = new EmbedBuilder()
       .setColor('#ED4245')
       .setTitle('Un membre nous a quittés')
       .setDescription(
-        `**${member.user.globalName || member.user.username}** vient de quitter Bruxelles Technique.\n\n` +
+        `**${displayName}** vient de quitter Bruxelles Role-Play.\n\n` +
         `Merci pour le temps passé parmi nous. Nous te souhaitons une bonne continuation !`
       )
       .addFields(
@@ -412,19 +263,17 @@ async function sendLeave(member) {
           inline: false,
         }
       )
-      .setImage('attachment://depart.png')
       .setThumbnail(
         member.user.displayAvatarURL({ size: 256 })
       )
       .setFooter({
-        text: 'Bruxelles Technique • Départ',
+        text: 'Bruxelles Role-Play • Départ',
       })
       .setTimestamp();
 
     await channel.send({
       content: `<@${member.id}>`,
       embeds: [embed],
-      files: [attachment],
       allowedMentions: {
         users: [member.id],
       },
