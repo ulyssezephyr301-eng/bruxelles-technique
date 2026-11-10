@@ -6,6 +6,7 @@ const cfg = require('./config');
 const { db, init } = require('./db');
 const gw = require('./giveaway');
 const tickets = require('./tickets');
+const effectif = require('./effectif');
 const help = require('./commandes');
 
 http.createServer((req, res) => { res.writeHead(200); res.end('ok'); })
@@ -51,6 +52,9 @@ client.once('clientReady', async () => {
   tickets.ensurePanel(client).catch((e) => console.error('panneau', e.message));
   setInterval(() => tickets.ensurePanel(client).catch(() => {}), 5 * 60 * 1000);
 
+  effectif.ensureEffectif(client, 'refresh').catch((e) => console.error('effectif', e.message));
+  setInterval(() => effectif.ensureEffectif(client, 'check').catch(() => {}), 5 * 60 * 1000);
+
   setInterval(async () => {
     const g = await gw.getActive(cfg.GUILD_ID);
     if (g && g.status === 'active' && Date.now() >= Number(g.end_ts)) await gw.finish(client);
@@ -61,7 +65,10 @@ client.once('clientReady', async () => {
 client.on('inviteCreate', (i) => cache.set(i.code, i.uses || 0));
 client.on('inviteDelete', (i) => cache.delete(i.code));
 
-client.on('messageDelete', (m) => { tickets.onMessageDelete(m, client).catch(() => {}); });
+client.on('messageDelete', (m) => {
+  tickets.onMessageDelete(m, client).catch(() => {});
+  effectif.onMessageDelete(m, client).catch(() => {});
+});
 client.on('channelDelete', (c) => { tickets.onChannelDelete(c, client).catch(() => {}); });
 
 client.on('guildMemberAdd', async (m) => {
@@ -98,6 +105,7 @@ client.on('guildMemberAdd', async (m) => {
 });
 
 client.on('guildMemberUpdate', async (oldM, newM) => {
+  effectif.onMemberUpdate(oldM, newM, client);
   if (newM.guild.id !== cfg.GUILD_ID) return;
   if (!newM.roles.cache.has(cfg.CIVIL_ROLE)) return;
   const r = await db.execute({
@@ -108,6 +116,7 @@ client.on('guildMemberUpdate', async (oldM, newM) => {
 });
 
 client.on('guildMemberRemove', async (m) => {
+  effectif.onMemberRemove(m, client);
   if (m.guild.id !== cfg.GUILD_ID) return;
   const r = await db.execute({
     sql: 'UPDATE invited SET has_left=1 WHERE guild_id=? AND invited_id=? AND has_left=0',
@@ -119,6 +128,7 @@ client.on('guildMemberRemove', async (m) => {
 client.on('interactionCreate', async (i) => {
   try {
     if (await tickets.handle(i, client)) return;
+    if (await effectif.handle(i, client)) return;
 
     if (i.isChatInputCommand() && i.commandName === 'commandes') {
       return i.reply({ embeds: [help.commandesEmbed()], flags: MessageFlags.Ephemeral });
