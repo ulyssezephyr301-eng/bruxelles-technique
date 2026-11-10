@@ -37,7 +37,6 @@ module.exports = {
 
   // Effectif
   EFFECTIF_CHANNEL: '1567234864694952037',
- 
   EFFECTIF_GROUPS: [
     {
       title: '👑 Direction', max: 250,
@@ -55,7 +54,11 @@ module.exports = {
       title: '💎 Soutiens', max: 450,
       roles: ['1569496721724280854', '1569496637414449213'], // Booster, VIP
     },
-  ],,
+  ],
+
+  // Vocaux temporaires
+  VOC_HRP_TRIGGER: '1514386360545579068',
+  VOC_RP_TRIGGER: '1563688321538850817',
 
   COLOR: 0xf5c518,
   FOOTER: 'Dev by U-lis ⚜',
