@@ -44,41 +44,40 @@ async function fetchMembers(guild) {
 async function buildPayload(guild) {
   await fetchMembers(guild);
 
-  const header = new EmbedBuilder()
-    .setColor(cfg.COLOR)
-    .setTitle('📋 Effectif • Bruxelles Roleplay')
-    .setDescription(
-      'Retrouvez ici les membres qui font vivre **Bruxelles Roleplay** au quotidien.\n' +
-      `🕒 Dernière mise à jour : <t:${Math.floor(Date.now() / 1000)}:R>`
-    );
-  if (guild.iconURL()) header.setThumbnail(guild.iconURL());
+  const parts = ['Retrouvez ici les membres qui font vivre **Bruxelles Roleplay** au quotidien.'];
 
-  const embeds = [header];
-  cfg.EFFECTIF_GROUPS.forEach((g, idx) => {
-    const seen = new Set();
-    const lines = g.roles.map((id) => {
+  for (const g of cfg.EFFECTIF_GROUPS) {
+    const lines = [`## ${g.title}`];
+    for (const id of g.roles) {
       const role = guild.roles.cache.get(id);
       const members = role
         ? [...role.members.values()]
             .filter((m) => !m.user.bot)
             .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { sensitivity: 'base' }))
         : [];
-      members.forEach((m) => seen.add(m.id));
-      return `<@&${id}> (${members.length}) : ${listMentions(members, g.max)}`;
-    });
-    const e = new EmbedBuilder()
-      .setColor(g.color)
-      .setTitle(`${g.title} • ${seen.size} membre${seen.size > 1 ? 's' : ''}`)
-      .setDescription(lines.join('\n\n'));
-    if (idx === cfg.EFFECTIF_GROUPS.length - 1) e.setFooter({ text: cfg.FOOTER }).setTimestamp();
-    embeds.push(e);
-  });
+      lines.push(`**${role ? role.name : 'Rôle introuvable'}** : ${listMentions(members, g.max)}`);
+    }
+    parts.push(lines.join('\n'));
+  }
+
+  parts.push(`-# 🕒 Dernière mise à jour : <t:${Math.floor(Date.now() / 1000)}:R>`);
+
+  let desc = parts.join('\n\n');
+  if (desc.length > 4000) desc = desc.slice(0, 3990).replace(/\s+\S*$/, '') + ' …';
+
+  const embed = new EmbedBuilder()
+    .setColor(cfg.COLOR)
+    .setTitle('📋 Effectif • Bruxelles Roleplay')
+    .setDescription(desc)
+    .setFooter({ text: cfg.FOOTER })
+    .setTimestamp();
+  if (guild.iconURL()) embed.setThumbnail(guild.iconURL());
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('ef_refresh').setLabel('Mettre à jour l’effectif')
       .setEmoji('🔄').setStyle(ButtonStyle.Primary)
   );
-  return { embeds, components: [row], allowedMentions: { parse: [] } };
+  return { embeds: [embed], components: [row], allowedMentions: { parse: [] } };
 }
 
 // mode : 'check' (renvoie seulement s'il manque), 'refresh' (met à jour), 'force' (renvoie un nouveau)
