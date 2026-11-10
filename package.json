@@ -2,9 +2,12 @@
   "name": "bruxelles-technique",
   "version": "1.1.0",
   "main": "index.js",
-  "scripts": { "start": "node index.js" },
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "discord.js": "^14.19.0",
-    "@libsql/client": "^0.14.0"
+    "@libsql/client": "^0.14.0",
+    "@napi-rs/canvas": "^1.1.0",
+    "discord.js": "^14.19.0"
   }
 }
