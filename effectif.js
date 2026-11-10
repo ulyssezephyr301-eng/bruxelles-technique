@@ -1,14 +1,20 @@
 const {
   EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags,
+  SlashCommandBuilder,
 } = require('discord.js');
 const cfg = require('./config');
 const { db } = require('./db');
 
 const EPH = MessageFlags.Ephemeral;
 const tracked = new Set(cfg.EFFECTIF_GROUPS.flatMap((g) => g.roles));
-let busy = false;
+let busy = 0;
 let lastRefresh = 0;
 let timer = null;
+
+const effectifCommand = new SlashCommandBuilder()
+  .setName('effectif')
+  .setDescription('Envoyer (ou renvoyer) l’effectif du serveur dans son salon')
+  .toJSON();
 
 function listMentions(members, max) {
   if (!members.length) return '*Aucun membre*';
@@ -24,8 +30,19 @@ function listMentions(members, max) {
   return rest > 0 ? `${out} … **+${rest}**` : out;
 }
 
+async function fetchMembers(guild) {
+  try {
+    await Promise.race([
+      guild.members.fetch(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000)),
+    ]);
+  } catch (e) {
+    console.error('fetch membres', e.message);
+  }
+}
+
 async function buildPayload(guild) {
-  await guild.members.fetch().catch((e) => console.error('fetch membres', e.message));
+  await fetchMembers(guild);
 
   const header = new EmbedBuilder()
     .setColor(cfg.COLOR)
@@ -65,13 +82,14 @@ async function buildPayload(guild) {
 }
 
 // mode : 'check' (renvoie seulement s'il manque), 'refresh' (met à jour), 'force' (renvoie un nouveau)
-async function ensureEffectif(client, mode = 'check') {
-  if (busy) return;
-  busy = true;
+async function ensureEffectif(client, mode = 'check', bypass = false) {
+  if (!bypass && busy && Date.now() - busy < 120000) return;
+  busy = Date.now();
   try {
     const guild = client.guilds.cache.get(cfg.GUILD_ID);
+    if (!guild) throw new Error('Serveur introuvable');
     const ch = await guild.channels.fetch(cfg.EFFECTIF_CHANNEL).catch(() => null);
-    if (!ch) return console.error('Salon effectif introuvable');
+    if (!ch) throw new Error('Salon introuvable ou invisible pour le bot');
 
     const r = await db.execute({ sql: 'SELECT * FROM effectif_panel WHERE guild_id=?', args: [guild.id] });
     const row = r.rows[0];
@@ -93,7 +111,7 @@ async function ensureEffectif(client, mode = 'check') {
     if (old) await old.delete().catch(() => {});
     lastRefresh = Date.now();
   } finally {
-    busy = false;
+    busy = 0;
   }
 }
 
@@ -123,6 +141,22 @@ function onMemberRemove(m, client) {
 }
 
 async function handle(i, client) {
+  if (i.isChatInputCommand() && i.commandName === 'effectif') {
+    if (!i.member.roles.cache.hasAny(...cfg.STAFF_ROLES)) {
+      await i.reply({ content: '❌ Réservé aux **Administrateur et +**.', flags: EPH });
+      return true;
+    }
+    await i.deferReply({ flags: EPH });
+    try {
+      await ensureEffectif(client, 'force', true);
+      await i.editReply(`✅ Effectif envoyé dans <#${cfg.EFFECTIF_CHANNEL}>.`);
+    } catch (e) {
+      console.error('effectif', e);
+      await i.editReply(`❌ Impossible d’envoyer l’effectif : \`${e.message}\``);
+    }
+    return true;
+  }
+
   if (!(i.isButton() && i.customId === 'ef_refresh')) return false;
   if (!i.member.roles.cache.hasAny(...cfg.TICKET_STAFF_ROLES)) {
     await i.reply({ content: '❌ Réservé au staff (Guide et +).', flags: EPH });
@@ -139,4 +173,6 @@ async function handle(i, client) {
   return true;
 }
 
-module.exports = { handle, ensureEffectif, onMessageDelete, onMemberUpdate, onMemberRemove };
+module.exports = {
+  effectifCommand, handle, ensureEffectif, onMessageDelete, onMemberUpdate, onMemberRemove,
+};
