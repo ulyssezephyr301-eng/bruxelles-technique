@@ -229,3 +229,4 @@ client.on('interactionCreate', async (i) => {
 });
 
 client.login(cfg.TOKEN);
+
