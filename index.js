@@ -386,9 +386,9 @@ client.on('interactionCreate', async (i) => {
       let code = r.rows[0]?.code;
 
       if (code) {
-        const still = await i.channel.invites.fetch()
-          .then((x) => x.has(code))
-          .catch(() => true);
+        const still = await i.guild.invites.fetch()
+  .then((x) => x.has(code))
+  .catch(() => true);
 
         if (!still) code = null;
       }
