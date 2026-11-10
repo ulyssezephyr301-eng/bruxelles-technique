@@ -88,6 +88,14 @@ client.on('channelDelete', (c) => {
 
 client.on('guildMemberAdd', async (m) => {
   if (m.user.bot || m.guild.id !== cfg.GUILD_ID) return;
+
+  // Rôles automatiques à l'arrivée
+  try {
+    await m.roles.add(cfg.AUTO_ROLES, 'Rôles automatiques à l’arrivée');
+  } catch (e) {
+    console.error('[autoroles]', m.user.tag, e.message);
+  }
+
   const inv = await m.guild.invites.fetch().catch(() => null);
   if (!inv) return;
   let used = null;
