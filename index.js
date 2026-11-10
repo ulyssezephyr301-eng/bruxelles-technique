@@ -7,6 +7,7 @@ const { db, init } = require('./db');
 const gw = require('./giveaway');
 const tickets = require('./tickets');
 const effectif = require('./effectif');
+const voc = require('./vocal');
 const help = require('./commandes');
 
 http.createServer((req, res) => { res.writeHead(200); res.end('ok'); })
@@ -18,6 +19,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildInvites,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildVoiceStates,
   ],
   partials: [Partials.Message, Partials.Channel],
 });
@@ -55,6 +57,9 @@ client.once('clientReady', async () => {
   effectif.ensureEffectif(client, 'refresh').catch((e) => console.error('effectif', e.message));
   setInterval(() => effectif.ensureEffectif(client, 'check').catch(() => {}), 5 * 60 * 1000);
 
+  console.log('[boot] module vocal chargé, vérification des salons déclencheurs…');
+  voc.sweep(client).catch((e) => console.error('[vocal] sweep', e));
+
   setInterval(async () => {
     const g = await gw.getActive(cfg.GUILD_ID);
     if (g && g.status === 'active' && Date.now() >= Number(g.end_ts)) await gw.finish(client);
@@ -65,11 +70,21 @@ client.once('clientReady', async () => {
 client.on('inviteCreate', (i) => cache.set(i.code, i.uses || 0));
 client.on('inviteDelete', (i) => cache.delete(i.code));
 
+client.on('voiceStateUpdate', (oldS, newS) => {
+  if (oldS.channelId !== newS.channelId) {
+    console.log(`[voice] ${newS.member?.user.tag} : ${oldS.channelId || '—'} → ${newS.channelId || '—'}`);
+  }
+  voc.onVoiceUpdate(oldS, newS).catch((e) => console.error('[vocal]', e));
+});
+
 client.on('messageDelete', (m) => {
   tickets.onMessageDelete(m, client).catch(() => {});
   effectif.onMessageDelete(m, client).catch(() => {});
 });
-client.on('channelDelete', (c) => { tickets.onChannelDelete(c, client).catch(() => {}); });
+client.on('channelDelete', (c) => {
+  tickets.onChannelDelete(c, client).catch(() => {});
+  voc.onChannelDelete(c).catch(() => {});
+});
 
 client.on('guildMemberAdd', async (m) => {
   if (m.user.bot || m.guild.id !== cfg.GUILD_ID) return;
@@ -129,6 +144,7 @@ client.on('interactionCreate', async (i) => {
   try {
     if (await tickets.handle(i, client)) return;
     if (await effectif.handle(i, client)) return;
+    if (await voc.handle(i)) return;
 
     if (i.isChatInputCommand() && i.commandName === 'commandes') {
       return i.reply({ embeds: [help.commandesEmbed()], flags: MessageFlags.Ephemeral });
