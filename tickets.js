@@ -16,7 +16,7 @@ const typeOf = (id) => cfg.TICKET_TYPES.find((t) => t.id === id);
 const isStaff = (m) => m.roles.cache.hasAny(...cfg.TICKET_STAFF_ROLES);
 const isAdmin = (m) => m.roles.cache.hasAny(...cfg.STAFF_ROLES);
 const isPremium = (m) => m.roles.cache.hasAny(cfg.ROLE_VIP, cfg.ROLE_BOOSTER);
-const staffPings = () => cfg.TICKET_STAFF_ROLES.map((r) => `<@&${r}>`).join(' ');
+const staffPings = () => cfg.TICKET_PING_ROLES.map((r) => `<@&${r}>`).join(' ');
 const fmtDur = (ms) => {
   const m = Math.max(0, Math.floor(ms / 60000));
   const h = Math.floor(m / 60);
@@ -344,7 +344,7 @@ async function onModal(i, client) {
       allowedMentions: { users: [i.user.id] },
     });
 
-    // Alerte staff
+    // Alerte staff (ping Modérateur + Guide)
     let alertId = null;
     const alertCh = await guild.channels.fetch(cfg.TICKET_ALERT_CHANNEL).catch(() => null);
     if (alertCh) {
@@ -360,7 +360,7 @@ async function onModal(i, client) {
             { name: '📌 Statut', value: '🟢 En attente de prise en charge', inline: true }
           )
           .setFooter({ text: cfg.FOOTER }).setTimestamp()],
-        allowedMentions: { roles: cfg.TICKET_STAFF_ROLES },
+        allowedMentions: { roles: cfg.TICKET_PING_ROLES },
       });
       alertId = alert.id;
     }
