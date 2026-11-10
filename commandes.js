@@ -39,6 +39,14 @@ function commandesEmbed() {
           `${cmd('ticket', 'panneau')} — Renvoyer le panneau de tickets — **Administrateur et +**`,
       },
       {
+        name: '🎙️ Vocaux temporaires',
+        value:
+          `🔹 Rejoins <#${cfg.VOC_HRP_TRIGGER}> — Tout le monde\n` +
+          '└ Crée ton **vocal HRP** avec un panneau pour le gérer (renommer, limite, verrouiller, masquer, inviter, expulser, bloquer, transférer).\n' +
+          `🔹 Rejoins <#${cfg.VOC_RP_TRIGGER}> — Tout le monde\n` +
+          '└ Crée une **fréquence RP** numérotée. Les vocaux vides sont supprimés automatiquement.',
+      },
+      {
         name: '🎉 Giveaway',
         value:
           `${cmd('giveaway', 'creer')} — Poster le giveaway d’invitations — **Administrateur et +**\n` +
@@ -47,8 +55,11 @@ function commandesEmbed() {
           '🔹 Bouton **Mon lien d’invitation** — Tout le monde',
       },
       {
-        name: '📖 Autres',
-        value: `${cmd('commandes')} — Afficher cette liste — Tout le monde`,
+        name: '📋 Effectif & autres',
+        value:
+          `${cmd('effectif')} — Envoyer ou renvoyer l’effectif du serveur — **Administrateur et +**\n` +
+          '🔹 Bouton **Mettre à jour l’effectif** — **Guide et +**\n' +
+          `${cmd('commandes')} — Afficher cette liste — Tout le monde`,
       },
       {
         name: '⚙️ Comment fonctionnent les tickets ?',
