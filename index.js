@@ -54,6 +54,8 @@ client.once('clientReady', async () => {
   await snapshot(guild).catch((e) => console.error('snapshot', e.message));
 
   tickets.ensurePanel(client).catch((e) => console.error('panneau', e.message));
+  notifications.ensurePanel(client).catch((e) => console.error('[notifications] panneau', e.message));
+setInterval(() => notifications.ensurePanel(client).catch(() => {}), 5 * 60 * 1000);
   setInterval(() => tickets.ensurePanel(client).catch(() => {}), 5 * 60 * 1000);
 
   notifications.ensurePanel(client).catch((e) => console.error('[notifications] panneau', e.message));
