@@ -241,12 +241,18 @@ async function handle(interaction) {
       (id) => NOTIFICATION_ROLES.find((r) => r.id === id).label
     );
 
-    await interaction.reply({
+    // Actualisation des menus pour vider la sélection
+    await interaction.update({
+      components: panelPayload().components,
+    });
+
+    await interaction.followUp({
       content: adding
         ? `✅ Rôle(s) ajouté(s) : **${labels.join(', ')}**.`
         : `✅ Rôle(s) retiré(s) : **${labels.join(', ')}**.`,
       flags: MessageFlags.Ephemeral,
     });
+
   } catch (error) {
     console.error('[notifications] Erreur :', error);
 
