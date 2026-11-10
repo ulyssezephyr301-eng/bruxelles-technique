@@ -28,6 +28,8 @@ async function init() {
       status TEXT, created_ts INTEGER)`,
     `CREATE TABLE IF NOT EXISTS ticket_panel (
       guild_id TEXT PRIMARY KEY, channel_id TEXT, message_id TEXT)`,
+    `CREATE TABLE IF NOT EXISTS effectif_panel (
+      guild_id TEXT PRIMARY KEY, channel_id TEXT, message_id TEXT)`,
   ];
   for (const sql of tables) await db.execute(sql);
 }
