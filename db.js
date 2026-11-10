@@ -30,6 +30,11 @@ async function init() {
       guild_id TEXT PRIMARY KEY, channel_id TEXT, message_id TEXT)`,
     `CREATE TABLE IF NOT EXISTS effectif_panel (
       guild_id TEXT PRIMARY KEY, channel_id TEXT, message_id TEXT)`,
+    `CREATE TABLE IF NOT EXISTS voc_hrp (
+      channel_id TEXT PRIMARY KEY, guild_id TEXT, owner_id TEXT,
+      state TEXT DEFAULT 'public', panel_msg_id TEXT)`,
+    `CREATE TABLE IF NOT EXISTS voc_rp (
+      channel_id TEXT PRIMARY KEY, guild_id TEXT, num INTEGER)`,
   ];
   for (const sql of tables) await db.execute(sql);
 }
