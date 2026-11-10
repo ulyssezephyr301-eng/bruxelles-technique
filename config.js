@@ -37,24 +37,25 @@ module.exports = {
 
   // Effectif
   EFFECTIF_CHANNEL: '1567234864694952037',
+ 
   EFFECTIF_GROUPS: [
     {
-      title: '👑 Direction', color: 0xf5c518, max: 600,
+      title: '👑 Direction', max: 250,
       roles: ['1513966828555210752', '1514237734472908810'], // Fondateur, Exécutif
     },
     {
-      title: '🛡️ Staff', color: 0xe67e22, max: 550,
+      title: '🛡️ Staff', max: 300,
       roles: ['1563694441212944434', '1514240629889175693', '1514240838916509696'], // Admin, Modo, Guide
     },
     {
-      title: '🎨 Pôle création', color: 0x2ecc71, max: 550,
+      title: '🎨 Pôle création', max: 300,
       roles: ['1558426593138049034', '1558426732699324446', '1569505793923874827'], // Graphiste, Développeur, Content creator
     },
     {
-      title: '💎 Soutiens', color: 0x9b59b6, max: 900,
+      title: '💎 Soutiens', max: 450,
       roles: ['1569496721724280854', '1569496637414449213'], // Booster, VIP
     },
-  ],
+  ],,
 
   COLOR: 0xf5c518,
   FOOTER: 'Dev by U-lis ⚜',
