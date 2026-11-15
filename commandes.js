@@ -1,3 +1,4 @@
+
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const cfg = require('./config');
 
@@ -7,7 +8,11 @@ const commandesCommand = new SlashCommandBuilder()
   .toJSON();
 
 let ids = new Map();
-const setIds = (cmds) => { ids = new Map(cmds.map((c) => [c.name, c.id])); };
+
+const setIds = (cmds) => {
+  ids = new Map(cmds.map((c) => [c.name, c.id]));
+};
+
 const cmd = (name, sub) => {
   const id = ids.get(name);
   const full = sub ? `${name} ${sub}` : name;
@@ -59,6 +64,7 @@ function commandesEmbed() {
         value:
           `${cmd('effectif')} — Envoyer ou renvoyer l’effectif du serveur — **Administrateur et +**\n` +
           '🔹 Bouton **Mettre à jour l’effectif** — **Guide et +**\n' +
+          `${cmd('demande-role')} — Déposer une demande de rôle — **Tout le monde**\n` +
           `${cmd('commandes')} — Afficher cette liste — Tout le monde`,
       },
       {
