@@ -34,6 +34,11 @@ const FORBIDDEN_ROLE_IDS = new Set([
   '1514240838916509696'
 ]);
 
+// Affichage du nom du rôle entre accents graves
+function formatRoleName(name) {
+  return '`' + String(name).replace(/`/g, '\\`') + '`';
+}
+
 // Commande slash
 const roleCommand = new SlashCommandBuilder()
   .setName('demande-role')
@@ -300,7 +305,7 @@ async function createRequest(i, client) {
         .setTitle('Demande de validation de rôle')
         .setDescription(
           `Bonjour <@${proofUser.id}> !\n\n` +
-          `<@${i.user.id}> souhaite obtenir le rôle <@&${role.id}>.\n\n` +
+          `<@${i.user.id}> souhaite obtenir le rôle ${formatRoleName(role.name)}.\n\n` +
           `**Justification :**\n${proofText || 'Aucune justification écrite.'}\n\n` +
           `Peux-tu confirmer ou refuser cette demande ?`
         )
@@ -315,7 +320,7 @@ async function createRequest(i, client) {
         components: [validatorButtons(id)]
       });
     } catch (error) {
-      console.error('[DEMANDE-ROLE] Impossible d'envoyer le MP :', error);
+      console.error('[DEMANDE-ROLE] Erreur envoi MP :', error);
 
       // Si le MP échoue, le staff peut prendre le relais
       await db.execute({
@@ -335,7 +340,7 @@ async function createRequest(i, client) {
   }
 
   await i.editReply(
-    `✅ Ta demande pour le rôle <@&${role.id}> a bien été envoyée dans <#${REQUEST_CHANNEL_ID}>.`
+    `✅ Ta demande pour le rôle ${formatRoleName(role.name)} a bien été envoyée dans <#${REQUEST_CHANNEL_ID}>.`
   );
 }
 
@@ -381,13 +386,85 @@ async function decide(i, client, type, action, id) {
     }
   }
 
+  // On réserve la demande pour éviter deux décisions simultanées
+  const claim = await db.execute({
+    sql: `
+      UPDATE role_requests
+      SET status = 'processing'
+      WHERE id = ? AND status = 'pending'
+    `,
+    args: [id]
+  });
+
+  if (Number(claim.rowsAffected) === 0) {
+    return i.reply({
+      content: '❌ Cette demande a déjà été traitée par quelqu’un d’autre.',
+      flags: EPH
+    });
+  }
+
   const newStatus = action === 'accept' ? 'accepted' : 'refused';
 
+  // Attribution réelle du rôle en cas d'acceptation
+  if (newStatus === 'accepted') {
+    try {
+      const guild = await client.guilds.fetch(request.guild_id);
+
+      const role = await guild.roles.fetch(request.role_id);
+
+      if (!role || role.id === guild.id || role.managed) {
+        throw new Error('Le rôle demandé est introuvable ou ne peut pas être attribué.');
+      }
+
+      const botMember = await guild.members.fetch(client.user.id);
+
+      if (!botMember.permissions.has('ManageRoles')) {
+        throw new Error('Le bot ne possède pas la permission Gérer les rôles.');
+      }
+
+      if (botMember.roles.highest.comparePositionTo(role) <= 0) {
+        throw new Error('Le rôle du bot doit être placé au-dessus du rôle demandé dans la hiérarchie Discord.');
+      }
+
+      const requester = await guild.members.fetch(request.requester_id);
+
+      await requester.roles.add(
+        role,
+        `Demande de rôle #${id} acceptée par ${i.user.tag}`
+      );
+
+    } catch (error) {
+      console.error('[DEMANDE-ROLE] Attribution du rôle impossible :', error);
+
+      // On remet la demande en attente si le rôle n'a pas pu être attribué
+      await db.execute({
+        sql: `
+          UPDATE role_requests
+          SET status = 'pending'
+          WHERE id = ? AND status = 'processing'
+        `,
+        args: [id]
+      });
+
+      const pendingRequest = await getRequest(id);
+      await updatePublicMessage(client, pendingRequest);
+
+      return i.reply({
+        content:
+          '❌ Impossible d’attribuer le rôle. La demande reste en attente.\n\n' +
+          `**Détail :** ${error.message}\n\n` +
+          'Vérifie les permissions du bot et la hiérarchie des rôles Discord.',
+        flags: EPH
+      });
+    }
+  }
+
+  // Enregistrement définitif de la décision
   const result = await db.execute({
     sql: `
       UPDATE role_requests
       SET status = ?, decided_by = ?, decided_ts = ?
-      WHERE id = ? AND status = 'pending'
+      WHERE id = ? AND status = 'processing'
     `,
     args: [
       newStatus,
@@ -399,7 +476,7 @@ async function decide(i, client, type, action, id) {
 
   if (Number(result.rowsAffected) === 0) {
     return i.reply({
-      content: '❌ Cette demande a déjà été traitée par quelqu’un d’autre.',
+      content: '❌ Impossible d’enregistrer la décision.',
       flags: EPH
     });
   }
@@ -408,14 +485,18 @@ async function decide(i, client, type, action, id) {
 
   await updatePublicMessage(client, updatedRequest);
 
-  // Prévenir le demandeur
+  // Prévenir le demandeur en MP
   try {
     const requester = await client.users.fetch(request.requester_id);
+    const guild = await client.guilds.fetch(request.guild_id);
+    const role = await guild.roles.fetch(request.role_id).catch(() => null);
+
+    const roleName = formatRoleName(role ? role.name : request.role_id);
 
     await requester.send(
       newStatus === 'accepted'
-        ? `✅ Ta demande pour le rôle <@&${request.role_id}> a été acceptée.`
-        : `❌ Ta demande pour le rôle <@&${request.role_id}> a été refusée.`
+        ? `✅ Ta demande pour le rôle ${roleName} a été acceptée. Le rôle t'a été attribué automatiquement.`
+        : `❌ Ta demande pour le rôle ${roleName} a été refusée.`
     );
   } catch (error) {
     console.error('[DEMANDE-ROLE] Impossible de prévenir le demandeur :', error);
@@ -423,7 +504,7 @@ async function decide(i, client, type, action, id) {
 
   return i.reply({
     content: newStatus === 'accepted'
-      ? '✅ Demande acceptée.'
+      ? '✅ Demande acceptée. Le rôle a bien été attribué au membre.'
       : '❌ Demande refusée.',
     flags: EPH
   });
