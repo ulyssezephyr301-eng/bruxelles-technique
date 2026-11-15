@@ -19,6 +19,7 @@ const effectif = require('./effectif');
 const voc = require('./vocal');
 const help = require('./commandes');
 const welcome = require('./welcome');
+const roleRequests = require('./demande-role');
 
 http.createServer((req, res) => {
   res.writeHead(200);
@@ -83,6 +84,7 @@ client.once('clientReady', async () => {
       tickets.ticketCommand,
       help.commandesCommand,
       effectif.effectifCommand,
+      roleRequests.roleCommand,
     ]);
 
     help.setIds(cmds);
@@ -279,6 +281,9 @@ client.on('guildMemberRemove', async (m) => {
 // Interactions Discord
 client.on('interactionCreate', async (i) => {
   try {
+    // Demandes de rôle
+    if (await roleRequests.handle(i, client)) return;
+
     if (await tickets.handle(i, client)) return;
     if (await notifications.handle(i)) return;
     if (await effectif.handle(i, client)) return;
@@ -387,8 +392,8 @@ client.on('interactionCreate', async (i) => {
 
       if (code) {
         const still = await i.guild.invites.fetch()
-  .then((x) => x.has(code))
-  .catch(() => true);
+          .then((x) => x.has(code))
+          .catch(() => true);
 
         if (!still) code = null;
       }
